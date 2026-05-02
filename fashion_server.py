@@ -25,9 +25,9 @@ from flask_cors import CORS
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 IMAGE_DIRS   = [Path("fashion-images")]
-INDEX_PATH   = Path("TCA/fashion_clip.index")
-PATHS_PATH   = Path("TCA/fashion_clip_paths.npy")
-URL_MAP_PATH = Path("TCA/url_map.json")
+INDEX_PATH   = Path("fashion_clip.index")
+PATHS_PATH   = Path("fashion_clip_paths.npy")
+URL_MAP_PATH = Path("url_map.json")
 MAX_K        = 500
 
 # ── R2 public base URL ────────────────────────────────────────────────────────
