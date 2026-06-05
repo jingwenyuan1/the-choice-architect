@@ -24,7 +24,7 @@ from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
 
 # ── Configuration ─────────────────────────────────────────────────────────────
-IMAGE_DIRS   = [Path("fashion-images")]
+IMAGE_DIRS   = [Path(__file__).parent.parent / "fashion-images"]
 INDEX_PATH   = Path("fashion_clip.index")
 PATHS_PATH   = Path("fashion_clip_paths.npy")
 URL_MAP_PATH = Path("url_map.json")
@@ -127,59 +127,56 @@ def _classify_pixel(r: int, g: int, b: int) -> str:
 
 
 def _compute_color(filename: str, region: str) -> str | None:
-    """Open one image and compute its dominant garment colour. Pure computation."""
-    for d in IMAGE_DIRS:
-        img_path = d / filename
-        if img_path.exists():
-            try:
-                W, H = 40, 60
-                img = Image.open(img_path).convert("RGB").resize((W, H), Image.LANCZOS)
-                all_px = list(img.getdata())
+    """Fetch image from R2 and compute its dominant garment colour."""
+    import io
+    import requests as req_lib
+    pid = Path(filename).stem
+    url = f"{R2_BASE_URL}/{pid}.jpg"
+    try:
+        resp = req_lib.get(url, timeout=5)
+        resp.raise_for_status()
+        W, H = 40, 60
+        img = Image.open(io.BytesIO(resp.content)).convert("RGB").resize((W, H), Image.LANCZOS)
+        all_px = list(img.getdata())
 
-                # Background colour: average the four corners
-                corners = [all_px[0], all_px[W - 1], all_px[(H - 1) * W], all_px[H * W - 1]]
-                bg = tuple(sum(c[ch] for c in corners) // 4 for ch in range(3))
+        corners = [all_px[0], all_px[W - 1], all_px[(H - 1) * W], all_px[H * W - 1]]
+        bg = tuple(sum(c[ch] for c in corners) // 4 for ch in range(3))
 
-                # Vertical region slice
-                if region == "upper":
-                    row_pixels = all_px[: int(H * 0.7) * W]
-                elif region == "lower":
-                    row_pixels = all_px[int(H * 0.3) * W :]
-                else:
-                    row_pixels = all_px
+        if region == "upper":
+            row_pixels = all_px[: int(H * 0.7) * W]
+        elif region == "lower":
+            row_pixels = all_px[int(H * 0.3) * W :]
+        else:
+            row_pixels = all_px
 
-                # Centre-column crop (middle 60% of width) — avoids edge skin/body
-                col_start = W // 5
-                col_end   = W - W // 5
-                h_rows    = len(row_pixels) // W
-                pixels = [
-                    row_pixels[row * W + col]
-                    for row in range(h_rows)
-                    for col in range(col_start, col_end)
-                ]
+        col_start = W // 5
+        col_end   = W - W // 5
+        h_rows    = len(row_pixels) // W
+        pixels = [
+            row_pixels[row * W + col]
+            for row in range(h_rows)
+            for col in range(col_start, col_end)
+        ]
 
-                counts: dict[str, int] = {}
-                for r, g, b in pixels:
-                    if abs(r - bg[0]) + abs(g - bg[1]) + abs(b - bg[2]) < 60:
-                        continue
-                    if r > 220 and g > 220 and b > 220:
-                        continue
-                    name = _classify_pixel(r, g, b)
-                    counts[name] = counts.get(name, 0) + 1
+        counts: dict[str, int] = {}
+        for r, g, b in pixels:
+            if abs(r - bg[0]) + abs(g - bg[1]) + abs(b - bg[2]) < 60:
+                continue
+            if r > 220 and g > 220 and b > 220:
+                continue
+            name = _classify_pixel(r, g, b)
+            counts[name] = counts.get(name, 0) + 1
 
-                if not counts:
-                    for r, g, b in pixels:
-                        name = _classify_pixel(r, g, b)
-                        counts[name] = counts.get(name, 0) + 1
+        if not counts:
+            for r, g, b in pixels:
+                name = _classify_pixel(r, g, b)
+                counts[name] = counts.get(name, 0) + 1
 
-                total_fg = sum(counts.values())
-                best     = max(counts, key=lambda k: counts[k])
-                # If no colour accounts for ≥ 40 % of foreground pixels the item
-                # is multicoloured — no single hue should "win" in that case.
-                return best if counts[best] / total_fg >= 0.40 else "multicolor"
-            except Exception:
-                pass
-    return None
+        total_fg = sum(counts.values())
+        best     = max(counts, key=lambda k: counts[k])
+        return best
+    except Exception:
+        return None
 
 
 # ── Persistent thread pool ────────────────────────────────────────────────────
@@ -252,13 +249,23 @@ def _semantic_search(query: str, k: int) -> list[dict]:
 
 def _image_search(image_url: str, k: int, exclude_pid: str | None = None) -> list[dict]:
     """Encode an image with CLIP and return top-k visually similar products."""
-    import io
-    import requests as req_lib
     import clip as openai_clip
 
-    resp = req_lib.get(image_url, timeout=10)
-    resp.raise_for_status()
-    img = Image.open(io.BytesIO(resp.content)).convert("RGB")
+    # Try to load image from disk first; fall back to R2 (client URL may be localhost)
+    filename = image_url.rsplit("/", 1)[-1].split("?")[0]
+    img = None
+    for d in IMAGE_DIRS:
+        p = d / filename
+        if p.exists():
+            img = Image.open(p).convert("RGB")
+            break
+    if img is None:
+        import requests as _requests
+        from io import BytesIO
+        r2_url = f"{R2_BASE_URL}/{filename}"
+        resp = _requests.get(r2_url, timeout=15)
+        resp.raise_for_status()
+        img = Image.open(BytesIO(resp.content)).convert("RGB")
 
     import torchvision.transforms as T
     preprocess = T.Compose([
