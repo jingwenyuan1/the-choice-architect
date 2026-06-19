@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Choice Architect</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="home">
+
+  <!-- ══════════════════════════════════════════════════
+       SECTION 1 — Hero
+  ══════════════════════════════════════════════════ -->
+  <section class="home-section" id="homeSection">
+
+    <header class="home-header" style="display:flex;align-items:center;justify-content:space-between;">
+      <a href="index.html" class="logo">The Choice Architect</a>
+      <a href="collections.html" class="avatar-btn" aria-label="My outfits">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="8" r="4"/>
+          <path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/>
+        </svg>
+      </a>
+    </header>
+
+    <main class="home-main">
+      <h1 class="hero-heading">What are you<br>designing today?</h1>
+
+      <div class="home-search-wrapper">
+        <form class="home-search-form" id="homeSearchForm">
+          <div class="home-search-bar">
+            <input
+              type="text"
+              id="homeSearchInput"
+              class="home-search-input"
+              placeholder="Design anything"
+              autocomplete="off"
+            >
+            <button type="submit" class="home-search-btn" aria-label="Search">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+            </button>
+          </div>
+        </form>
+      </div>
+    </main>
+
+    <button class="browse-outfits-btn" id="browseOutfitsBtn" aria-label="Browse outfits">
+      Browse outfits
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="6 9 12 15 18 9"/>
+      </svg>
+    </button>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════════
+       SECTION 2 — Masonry Browse
+  ══════════════════════════════════════════════════ -->
+  <section class="browse-section" id="browseSection">
+    <div class="masonry-grid" id="masonryGrid">
+      <div class="masonry-col" id="masCol0"></div>
+      <div class="masonry-col" id="masCol1"></div>
+      <div class="masonry-col" id="masCol2"></div>
+      <div class="masonry-col" id="masCol3"></div>
+      <div class="masonry-col" id="masCol4"></div>
+    </div>
+    <div id="masonrySentinel"></div>
+  </section>
+
+  <script>
+    // ── Search form ─────────────────────────────────────────────────────
+    document.getElementById('homeSearchForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const q = document.getElementById('homeSearchInput').value.trim();
+      if (q) window.location.href = 'search.html?q=' + encodeURIComponent(q);
+    });
+
+    // ══════════════════════════════════════════════════════════════════
+    //  SCROLL SNAP  —  home → browse (once), free scroll after
+    // ══════════════════════════════════════════════════════════════════
+    let hasPassedSnap  = false;
+    let snapInProgress = false;
+
+    function snapToBrowse() {
+      if (snapInProgress) return;
+      hasPassedSnap  = true;
+      snapInProgress = true;
+      document.getElementById('browseSection').scrollIntoView({ behavior: 'smooth' });
+      ensureBrowseLoaded();
+      setTimeout(() => { snapInProgress = false; }, 1200);
+    }
+
+    window.addEventListener('scroll', function () {
+      if (snapInProgress) return;
+      const y = window.scrollY || window.pageYOffset;
+      if (y < 10) { hasPassedSnap = false; return; }
+      if (!hasPassedSnap) snapToBrowse();
+    }, { passive: true });
+
+    document.getElementById('browseOutfitsBtn').addEventListener('click', function () {
+      snapToBrowse();
+    });
+
+    // ══════════════════════════════════════════════════════════════════
+    //  MASONRY BROWSE
+    // ══════════════════════════════════════════════════════════════════
+    const API_BASE = 'https://the-choice-architect-production-36b0.up.railway.app';
+    const NUM_COLS = 5;
+    const BATCH    = 30;
+
+    // Variety of portrait aspect ratios (height ÷ width > 1)
+    const ASPECTS = [1.25, 1.35, 1.5, 1.65, 1.8, 2.0, 1.2, 1.4, 1.55, 1.9];
+
+    const QUERIES = [
+      'fashion outfit', 'dress', 'casual clothing', 'formal wear',
+      'street style', 'accessories', 'jeans', 'jacket', 'blouse top',
+      'shoes', 'handbag', 'skirt', 'summer style', 'winter fashion',
+      'luxury fashion', 'vintage clothing', 'sportswear', 'evening gown',
+    ];
+
+    const colH       = new Array(NUM_COLS).fill(0); // relative column heights
+    const shownIds   = new Set();
+    let   pool       = [];
+    let   poolIdx    = 0;
+    let   fetching          = false;
+    let   browseInit        = false;
+    let   queryIdx          = 0;
+    let   initialBatchDone  = false;
+
+    function shortestCol() {
+      let min = Infinity, idx = 0;
+      for (let i = 0; i < NUM_COLS; i++) { if (colH[i] < min) { min = colH[i]; idx = i; } }
+      return idx;
+    }
+
+    // Fade-in: fires when item enters viewport (negative bottom margin = item must be more visible)
+    const fadeObs = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('masonry-visible');
+          fadeObs.unobserve(entry.target);
+        }
+      });
+    }, { rootMargin: '0px 0px -40px 0px' });
+
+    // Infinite scroll: fires when sentinel nears viewport bottom
+    const sentinelObs = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        if (poolIdx < pool.length) renderBatch();
+        else                       fetchBrowse();
+      });
+    }, { rootMargin: '0px 0px 800px 0px' });
+
+    function addItem(product, colIdx) {
+      const aspect = ASPECTS[Math.floor(Math.random() * ASPECTS.length)];
+
+      const item = document.createElement('div');
+      item.className = 'masonry-item';
+      item.style.aspectRatio     = `1 / ${aspect}`;
+      item.style.transitionDelay = initialBatchDone ? `${200 + colIdx * 150}ms` : '0ms';
+      item.dataset.productId     = product.id;
+
+      const img = document.createElement('img');
+      img.src         = product.image_url;
+      img.alt         = product.name || '';
+      img.loading     = 'lazy';
+      img.crossOrigin = 'anonymous';
+      item.appendChild(img);
+
+      const overlay = document.createElement('div');
+      overlay.className = 'masonry-item-overlay';
+      overlay.innerHTML = '<button class="masonry-open-btn">OPEN IN GENERATOR</button>';
+      item.appendChild(overlay);
+
+      document.getElementById(`masCol${colIdx}`).appendChild(item);
+      colH[colIdx] += aspect;
+
+      requestAnimationFrame(() => fadeObs.observe(item));
+    }
+
+    function renderBatch() {
+      let count = 0;
+      while (poolIdx < pool.length && count < BATCH) {
+        const p = pool[poolIdx++];
+        if (!p.image_url || shownIds.has(p.id)) continue;
+        shownIds.add(p.id);
+        addItem(p, shortestCol());
+        count++;
+      }
+      initialBatchDone = true;
+    }
+
+    async function fetchBrowse() {
+      if (fetching) return;
+      fetching = true;
+
+      const q = QUERIES[queryIdx % QUERIES.length];
+      queryIdx++;
+
+      try {
+        const resp    = await fetch(`${API_BASE}/search?q=${encodeURIComponent(q)}&k=200`);
+        const results = await resp.json();
+        // Shuffle to avoid showing them in rank order
+        const shuffled = results.sort(() => Math.random() - 0.5);
+        for (const item of shuffled) {
+          if (!shownIds.has(item.id)) pool.push(item);
+        }
+        renderBatch();
+      } catch (err) {
+        console.error('Browse fetch failed:', err);
+      }
+
+      fetching = false;
+    }
+
+    function ensureBrowseLoaded() {
+      if (browseInit) return;
+      browseInit = true;
+      sentinelObs.observe(document.getElementById('masonrySentinel'));
+      fetchBrowse(); // kick off first fetch immediately
+    }
+
+    // Pre-fetch in background so the section feels instant on first scroll
+    setTimeout(ensureBrowseLoaded, 600);
+
+    // ── Open in Generator ───────────────────────────────────────────────
+    function openInGenerator(product) {
+      const outfits = JSON.parse(localStorage.getItem('tca_outfits') || '[]');
+      const newOutfit = {
+        id:       Date.now().toString(36) + Math.random().toString(36).slice(2),
+        name:     '',
+        products: [product],
+      };
+      outfits.push(newOutfit);
+      localStorage.setItem('tca_outfits', JSON.stringify(outfits));
+      window.location.href = 'collection-generator.html?collection='
+        + encodeURIComponent(newOutfit.id) + '&fromBrowse=1';
+    }
+
+    document.getElementById('masonryGrid').addEventListener('click', function (e) {
+      const btn = e.target.closest('.masonry-open-btn');
+      if (!btn) return;
+      const item      = btn.closest('.masonry-item');
+      const productId = item && item.dataset.productId;
+      const product   = productId && pool.find(p => p.id === productId);
+      if (product) openInGenerator(product);
+    });
+  </script>
+
+</body>
+</html>

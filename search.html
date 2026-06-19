@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Choice Architect</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ── Header ─────────────────────────────────────── -->
+  <header class="results-header">
+    <a href="index.html" class="results-logo">The Choice Architect</a>
+
+    <div class="results-header-right">
+      <form class="results-search-form" id="resultsSearchForm">
+        <div class="results-search-bar">
+          <input
+            type="text"
+            id="resultsSearchInput"
+            class="results-search-input"
+            placeholder="Search fashion…"
+            autocomplete="off"
+          >
+          <button type="submit" class="results-search-btn" aria-label="Search">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+          </button>
+        </div>
+      </form>
+      <a href="collections.html" class="avatar-btn" aria-label="My outfits">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="8" r="4"/>
+          <path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/>
+        </svg>
+      </a>
+    </div>
+  </header>
+
+  <!-- ── Filters row ────────────────────────────────── -->
+  <div class="filters-row">
+    <div class="price-range-section">
+      <span class="price-range-label">Price range</span>
+      <div class="price-inputs">
+        <span class="price-label">Min</span>
+        <input type="number" id="priceMin" class="price-input" placeholder="" min="0">
+        <span class="price-label">Max</span>
+        <input type="number" id="priceMax" class="price-input" placeholder="" min="0">
+        <button class="price-search-btn" id="priceSearchBtn" aria-label="Apply price filter">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="attr-search-section">
+      <span class="attr-search-label">Search another attribute</span>
+      <div class="attr-search-input-wrapper">
+        <input
+          type="text"
+          class="attr-search-input"
+          placeholder="Search"
+          autocomplete="off"
+        >
+        <div class="attr-dropdown" id="attrDropdown"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Products grid ──────────────────────────────── -->
+  <section class="products-section">
+    <div class="products-scroll-wrapper">
+      <div class="products-track" id="productsGrid">
+        <!-- Cards are injected by JS -->
+        <p class="no-results" id="noResults" style="display:none;">No products found.</p>
+      </div>
+    </div>
+    <p class="cg-status-text" id="searchStatusText">Searching…</p>
+  </section>
+
+  <!-- ── Nav arrows ─────────────────────────────────── -->
+  <div class="nav-row">
+    <div class="nav-row-left">
+      <button class="nav-arrow-btn" id="prevBtn" aria-label="Previous">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+      </button>
+      <button class="nav-arrow-btn" id="nextBtn" aria-label="Next">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── ROLL button ────────────────────────────────── -->
+  <div class="roll-section">
+    <button class="roll-btn" id="rollBtn">ROLL</button>
+  </div>
+
+  <!-- ── Save to outfit modal ──────────────────── -->
+  <div class="save-modal-overlay" id="saveModal" role="dialog" aria-modal="true">
+    <div class="save-modal-box">
+      <button class="save-modal-close" id="saveModalClose">&#x2715;</button>
+      <h2 class="save-modal-title">Save to outfit</h2>
+      <div class="save-modal-input-row">
+        <input type="text" id="saveModalInput" class="save-modal-input" placeholder="New outfit name" autocomplete="off">
+        <button class="save-modal-add-btn" id="saveModalAddBtn">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <line x1="1" y1="6" x2="11" y2="6" stroke="#fffaf5" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="6" y1="1" x2="6" y2="11" stroke="#fffaf5" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <div class="save-modal-list" id="saveModalList"></div>
+    </div>
+  </div>
+
+  <script>
+    // ═══════════════════════════════════════════════════════════════════
+    //  LOCK ICON SVGs
+    // ═══════════════════════════════════════════════════════════════════
+    const LOCK_CLOSED_SVG = `<svg width="18" height="18" viewBox="0 0 15 26" fill="none" aria-hidden="true"><rect x="0" y="11" width="15" height="13" rx="1.5" fill="#fffaf5"/><path d="M2.5,13 L2.5,8 A5,5 0 0 1 12.5,8 L12.5,12.5" stroke="#fffaf5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    const LOCK_OPEN_SVG   = `<svg width="18" height="18" viewBox="0 0 15 26" fill="none" aria-hidden="true"><rect x="0" y="11" width="15" height="13" rx="1.5" fill="#fffaf5"/><path d="M2.5,7 A5,5 0 0 1 12.5,8 L12.5,12.5" stroke="#fffaf5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    const STAR_SVG        = `<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+    const SAVE_SVG        = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`;
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  MATERIALS
+    // ═══════════════════════════════════════════════════════════════════
+    const MATERIALS = ['cotton','polyester','satin','nylon','wool','linen','denim','leather','silk','spandex'];
+    function randomMaterial() {
+      return MATERIALS[Math.floor(Math.random() * MATERIALS.length)];
+    }
+    function formatMaterial(m) {
+      return m ? m.charAt(0).toUpperCase() + m.slice(1) : '';
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  ATTRIBUTE OPTIONS PER CATEGORY
+    // ═══════════════════════════════════════════════════════════════════
+    const ATTR_GROUPS_BY_CATEGORY = {
+      jeans: [
+        { cat: 'Fit',  values: ['Bootcut','Straight','Baggy','Skinny','Flare','Curvy'] },
+        { cat: 'Rise', values: ['Low','Mid','High'] },
+      ],
+      tops: [
+        { cat: 'Length',   values: ['Cropped','Normal','Long'] },
+        { cat: 'Neckline', values: ['Scoop','V-Neck','Square','Halter','Boat','Plunge','Off-the-Shoulder','One Shoulder'] },
+        { cat: 'Sleeves',  values: ['Sleeveless','Short','Long','Cap','Elbow-Length','Three-Quarter'] },
+      ],
+      jackets: [
+        { cat: 'Temperature', values: ['Moderate Cold','Severe Cold','Extreme Cold'] },
+      ],
+      necklace: [
+        { cat: 'Plating', values: ['Gold','Rose Gold','Rhodium','Silver'] },
+        { cat: 'Length',  values: ['12-14"','14-16"','17-19"','20-22"','22-24"','24+"'] },
+        { cat: 'Chain',   values: ['Cable','Box','Figaro','Cuban','Rope','Paperclip'] },
+      ],
+      earring: [
+        { cat: 'Plating', values: ['Gold','Rose Gold','Rhodium','Silver'] },
+        { cat: 'Back',    values: ['Butterfly','Screw','Flat','Omega','La Pousette','Lever','Fish Hook','Hinged'] },
+      ],
+      jewelry: [
+        { cat: 'Plating', values: ['Gold','Rose Gold','Rhodium','Silver'] },
+      ],
+    };
+    const PATTERN_ATTR_GROUP = { cat: 'Pattern', values: ['Floral','Polka Dot','Stripes','Animal Print','Plaid','Camo','Gingham'] };
+    const NO_PATTERN_CATEGORIES = new Set(['jewelry', 'necklace', 'earring', 'shoes']);
+
+    function getSearchCategory(q) {
+      const s = (q || '').toLowerCase();
+      if (/necklace/.test(s))                                        return 'necklace';
+      if (/earring/.test(s))                                         return 'earring';
+      if (/jean|pant|trouser|chino|legging/.test(s))                 return 'jeans';
+      if (/\btop\b|shirt|blouse|tee|t-shirt|crop|cami|tank/.test(s)) return 'tops';
+      if (/jacket|coat|blazer|cardigan|hoodie|sweater/.test(s))      return 'jackets';
+      if (/jewelry|jewellery|\bring\b|bracelet|pendant/.test(s))     return 'jewelry';
+      if (/shoe|sneaker|boot|heel|sandal|loafer|mule/.test(s))       return 'shoes';
+      return 'other';
+    }
+
+    function getAllAttrOptions(category) {
+      const specific = ATTR_GROUPS_BY_CATEGORY[category] || [];
+      const groups = NO_PATTERN_CATEGORIES.has(category)
+        ? specific
+        : [...specific, PATTERN_ATTR_GROUP];
+      const options = [];
+      for (const group of groups) {
+        for (const value of group.values) {
+          options.push({ attrName: group.cat, value, display: `${group.cat}: ${value}` });
+        }
+      }
+      return options;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  BACKEND CONFIG
+    // ═══════════════════════════════════════════════════════════════════
+    const API_BASE = 'https://the-choice-architect-production-36b0.up.railway.app';
+    const FETCH_K  = 500;
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  SLOT STATE
+    // ═══════════════════════════════════════════════════════════════════
+    let rankedResults      = [];
+    let filteredResults    = [];
+    let dismissedIds       = new Set();
+    let slotProducts       = [null, null, null, null, null];
+    let slotLocked         = [false, false, false, false, false];
+    let slotColorLocked    = [false, false, false, false, false];
+    let slotMaterials      = [null, null, null, null, null];
+    let slotMaterialLocked = [false, false, false, false, false];
+    let activeAttributes   = []; // [{attrName, value, display}]
+    let slotAttrLocked     = [[], [], [], [], []]; // [slotIdx][attrIdx]
+    let colorFilterColors  = new Set();
+    let nextIndex          = 0;
+    let rollHistory        = [];
+    const FADE_MS = 700;
+    let   isFading = false;
+
+    // Compact non-null slots left, padding nulls to the right
+    function compactSlots() {
+      const active = slotProducts
+        .map((p, i) => p ? {
+          product:        p,
+          locked:         slotLocked[i],
+          colorLocked:    slotColorLocked[i],
+          material:       slotMaterials[i],
+          materialLocked: slotMaterialLocked[i],
+          attrLocked:     slotAttrLocked[i] ? [...slotAttrLocked[i]] : activeAttributes.map(() => false),
+        } : null)
+        .filter(Boolean);
+      for (let i = 0; i < 5; i++) {
+        if (i < active.length) {
+          slotProducts[i]       = active[i].product;
+          slotLocked[i]         = active[i].locked;
+          slotColorLocked[i]    = active[i].colorLocked;
+          slotMaterials[i]      = active[i].material;
+          slotMaterialLocked[i] = active[i].materialLocked;
+          slotAttrLocked[i]     = active[i].attrLocked;
+        } else {
+          slotProducts[i]       = null;
+          slotLocked[i]         = false;
+          slotColorLocked[i]    = false;
+          slotMaterials[i]      = null;
+          slotMaterialLocked[i] = false;
+          slotAttrLocked[i]     = activeAttributes.map(() => false);
+        }
+      }
+      rebuildColorFilterColors();
+    }
+
+    // Rebuild colorFilterColors from current slotColorLocked state
+    function rebuildColorFilterColors() {
+      colorFilterColors.clear();
+      slotProducts.forEach((p, i) => {
+        if (p && slotColorLocked[i] && p.color) colorFilterColors.add(p.color);
+      });
+    }
+
+    // ── Format helpers ──────────────────────────────────────────────────
+    function formatColor(code) {
+      if (!code || code === 'other') return 'Multicolor';
+      return code.charAt(0).toUpperCase() + code.slice(1);
+    }
+
+    // ── Compute which lock icons should show as closed (includes propagation) ──
+    function computeIconStates() {
+      // Color: show closed if this slot is color-locked OR another slot with same color is locked
+      const colorIcons = slotProducts.map((p, i) => {
+        if (!p) return false;
+        if (slotColorLocked[i]) return true;
+        return slotProducts.some((q, j) => j !== i && q && slotColorLocked[j] && q.color === p.color);
+      });
+
+      // Material: show closed if this slot is material-locked OR another slot with same material is locked
+      const materialIcons = slotProducts.map((p, i) => {
+        if (!p) return false;
+        if (slotMaterialLocked[i]) return true;
+        return slotProducts.some((q, j) =>
+          j !== i && q && slotMaterialLocked[j] && slotMaterials[j] === slotMaterials[i]
+        );
+      });
+
+      // Attrs: since all cards show the same attribute, if ANY slot has attr j locked → show locked on all
+      const attrIcons = slotProducts.map((p, i) => {
+        if (!p) return activeAttributes.map(() => false);
+        return activeAttributes.map((_, j) => {
+          if (slotAttrLocked[i] && slotAttrLocked[i][j]) return true;
+          return slotAttrLocked.some((locks, k) =>
+            k !== i && slotProducts[k] && locks && locks[j]
+          );
+        });
+      });
+
+      return { colorIcons, materialIcons, attrIcons };
+    }
+
+    // ── Build the HTML for one product card ────────────────────────────
+    function buildCardHTML(product, slotIndex, isSlotLocked,
+                           isColorLocked, showColorLockedIcon,
+                           material, isMaterialLocked, showMaterialLockedIcon,
+                           attrLockedData) {
+      const imgSrc  = product.image_url;
+      const nameEsc = product.name.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
+      const rawColor  = product.color;
+      console.log(`[color] slot=${slotIndex} id=${product.id} color=${JSON.stringify(rawColor)}`);
+      const colorText = (rawColor && rawColor !== 'other')
+        ? `Color: ${formatColor(rawColor)}`
+        : 'Color: Multicolor';
+
+      const priceText = product.price != null
+        ? `$${Number(product.price).toFixed(2)}`
+        : '$Price';
+
+      const href      = product.link || '#';
+      const linkAttrs = product.link ? ' target="_blank" rel="noopener"' : '';
+
+      const slotLockBtn = `<button class="icon-btn slot-lock-btn" aria-label="${isSlotLocked ? 'Unlock slot' : 'Lock slot'}" data-slot="${slotIndex}">${isSlotLocked ? LOCK_CLOSED_SVG : LOCK_OPEN_SVG}</button>`;
+      const persistentLock = `<button class="slot-lock-btn persistent-lock" aria-label="Unlock slot" data-slot="${slotIndex}">${LOCK_CLOSED_SVG}</button>`;
+
+      const colorRow = `<div class="product-color-row">
+            <span class="product-detail color-label">${colorText}</span>
+            <button class="icon-btn deco-lock-btn" aria-label="${isColorLocked ? 'Unlock colour filter' : 'Lock colour filter'}" data-deco="${isColorLocked ? '1' : '0'}">${showColorLockedIcon ? LOCK_CLOSED_SVG : LOCK_OPEN_SVG}</button>
+          </div>`;
+
+      const materialRow = `<div class="product-material-row">
+            <span class="product-detail material-label">Material: ${formatMaterial(material)}</span>
+            <button class="icon-btn material-lock-btn" aria-label="${isMaterialLocked ? 'Unlock material' : 'Lock material'}" data-material-locked="${isMaterialLocked ? '1' : '0'}">${showMaterialLockedIcon ? LOCK_CLOSED_SVG : LOCK_OPEN_SVG}</button>
+          </div>`;
+
+      const attrRows = attrLockedData.map((a, j) => `<div class="product-attr-row">
+            <span class="product-detail attr-label">${a.display}</span>
+            <button class="attr-remove-btn" aria-label="Remove attribute" data-attr-idx="${j}">&#x2715;</button>
+            <button class="icon-btn attr-lock-btn" aria-label="${a.isLocked ? 'Unlock attribute' : 'Lock attribute'}" data-attr-idx="${j}" data-attr-locked="${a.isLocked ? '1' : '0'}">${a.showIcon ? LOCK_CLOSED_SVG : LOCK_OPEN_SVG}</button>
+          </div>`).join('');
+
+      return `<div class="product-card${isSlotLocked ? ' is-locked' : ''}" data-id="${product.id}" data-slot="${slotIndex}">
+        <img class="product-img" src="${imgSrc}" alt="${nameEsc}" loading="lazy" crossorigin="anonymous">
+        ${persistentLock}
+        <div class="card-overlay">
+          <div class="overlay-top">
+            <button class="close-btn" aria-label="Dismiss" data-slot="${slotIndex}"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><line x1="1" y1="1" x2="11" y2="11" stroke="#fffaf5" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="1" x2="1" y2="11" stroke="#fffaf5" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+            <div class="dots-grid">
+              <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+              <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+            </div>
+            ${slotLockBtn}
+          </div>
+          <div class="card-info">
+            <div class="card-info-frozen">
+              <h3 class="product-name">${nameEsc}</h3>
+              <span class="product-brand">Brand name</span>
+              <div class="product-price-rating">
+                <span>${priceText}</span>
+                <span class="product-rating">${STAR_SVG} 5.0</span>
+              </div>
+            </div>
+            <div class="card-attrs-scroll">
+              ${colorRow}
+              ${materialRow}
+              ${attrRows}
+            </div>
+          </div>
+          <div class="card-footer">
+            <a href="${href}"${linkAttrs} class="product-webpage-btn">Product Webpage</a>
+            <button class="save-btn" aria-label="Save to outfit">${SAVE_SVG}</button>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    // ── Render all 5 slots ─────────────────────────────────────────────
+    function renderSlots(animate) {
+      const track     = document.getElementById('productsGrid');
+      const noResults = document.getElementById('noResults');
+
+      track.querySelectorAll('.product-card').forEach(c => c.remove());
+
+      const filled = slotProducts.filter(Boolean);
+      if (filled.length === 0) {
+        noResults.textContent   = 'No products found.';
+        noResults.style.display = 'block';
+        return;
+      }
+
+      noResults.style.display = 'none';
+      const { colorIcons, materialIcons, attrIcons } = computeIconStates();
+
+      slotProducts.forEach((product, i) => {
+        if (!product) return;
+
+        const attrLockedData = activeAttributes.map((attr, j) => ({
+          attrName: attr.attrName,
+          value:    attr.value,
+          display:  attr.display,
+          isLocked: !!(slotAttrLocked[i] && slotAttrLocked[i][j]),
+          showIcon: !!(attrIcons[i] && attrIcons[i][j]),
+        }));
+
+        const tmp = document.createElement('div');
+        tmp.innerHTML = buildCardHTML(
+          product, i, slotLocked[i],
+          slotColorLocked[i], colorIcons[i],
+          slotMaterials[i], slotMaterialLocked[i], materialIcons[i],
+          attrLockedData
+        ).trim();
+        const card = tmp.firstElementChild;
+        if (animate && (!(animate instanceof Set) || animate.has(i))) card.classList.add('card-fade-in');
+        track.insertBefore(card, noResults);
+      });
+
+      document.querySelector('.products-scroll-wrapper').scrollLeft = 0;
+    }
+
+    // ── Show / hide the loading skeleton ──────────────────────────────
+    function setLoading(on) {
+      const track     = document.getElementById('productsGrid');
+      const noResults = document.getElementById('noResults');
+      track.querySelectorAll('.product-card').forEach(c => c.remove());
+      if (on) {
+        noResults.style.display = 'block';
+        noResults.textContent   = 'Searching…';
+      } else {
+        noResults.style.display = 'none';
+        noResults.textContent   = 'No products found.';
+      }
+    }
+
+    // ── Reset slots from a fresh results array ─────────────────────────
+    function initSlots(results) {
+      dismissedIds       = new Set();
+      filteredResults    = results;
+      slotProducts       = Array.from({ length: 5 }, (_, i) => filteredResults[i] || null);
+      slotLocked         = [false, false, false, false, false];
+      slotColorLocked    = [false, false, false, false, false];
+      slotMaterials      = Array.from({ length: 5 }, () => randomMaterial());
+      slotMaterialLocked = [false, false, false, false, false];
+      slotAttrLocked     = Array.from({ length: 5 }, () => activeAttributes.map(() => false));
+      colorFilterColors.clear();
+      nextIndex          = Math.min(5, filteredResults.length);
+      rollHistory        = [];
+      renderSlots(true);
+    }
+
+    // ── Fetch results from the FAISS search server ─────────────────────
+    async function runSearch(query, showStatus = false) {
+      const statusEl = document.getElementById('searchStatusText');
+      if (!query || !query.trim()) {
+        if (statusEl) statusEl.classList.remove('is-visible');
+        initSlots([]);
+        document.getElementById('noResults').textContent = 'Type something to search.';
+        document.getElementById('noResults').style.display = 'block';
+        return;
+      }
+
+      if (showStatus && statusEl) statusEl.classList.add('is-visible');
+      setLoading(true);
+
+      const attrTerms = activeAttributes.map(a => a.value).join(' ');
+      const fullQuery = attrTerms ? `${query} ${attrTerms}` : query;
+
+      try {
+        const url  = `${API_BASE}/search?q=${encodeURIComponent(fullQuery)}&k=${FETCH_K}`;
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`Server returned ${resp.status}`);
+        rankedResults = await resp.json();
+        if (statusEl) statusEl.classList.remove('is-visible');
+        initSlots(rankedResults);
+        document.getElementById('productsGrid').style.opacity = '1';
+      } catch (err) {
+        if (statusEl) statusEl.classList.remove('is-visible');
+        const noResults = document.getElementById('noResults');
+        noResults.style.display = 'block';
+        noResults.textContent   =
+          'Could not reach the search server. ' +
+          'Run: python fashion_server.py';
+        console.error(err);
+        document.getElementById('productsGrid').style.opacity = '1';
+      }
+    }
+
+    // ── Advance unlocked slots to next products in filteredResults ─────
+    async function doRoll() {
+      if (filteredResults.length === 0 || isFading) return;
+
+      const unlockedIndices = new Set(
+        slotProducts.reduce((acc, p, i) => { if (p && !slotLocked[i]) acc.push(i); return acc; }, [])
+      );
+      if (unlockedIndices.size === 0) return;
+      isFading = true;
+
+      document.getElementById('productsGrid').querySelectorAll('.product-card').forEach(el => {
+        if (unlockedIndices.has(parseInt(el.dataset.slot, 10))) {
+          el.style.transition = 'opacity 350ms linear';
+          el.style.opacity    = '0';
+        }
+      });
+      await new Promise(r => setTimeout(r, 350));
+
+      rollHistory.push({
+        slotProducts:      [...slotProducts],
+        slotLocked:        [...slotLocked],
+        slotColorLocked:   [...slotColorLocked],
+        colorFilterColors: new Set(colorFilterColors),
+        slotMaterials:     [...slotMaterials],
+        slotMaterialLocked:[...slotMaterialLocked],
+        slotAttrLocked:    slotAttrLocked.map(arr => [...(arr || [])]),
+        nextIndex,
+      });
+      if (rollHistory.length > 50) rollHistory.shift();
+
+      const lockedIds = new Set(
+        slotProducts.filter((p, i) => slotLocked[i] && p).map(p => p.id)
+      );
+      const shownIds = new Set(
+        slotProducts.filter((p, i) => !slotLocked[i] && p).map(p => p.id)
+      );
+
+      const total = filteredResults.length;
+      const fresh = [], stale = [];
+
+      for (let i = 0; i < total; i++) {
+        const p = filteredResults[(nextIndex + i) % total];
+        if (lockedIds.has(p.id)) continue;
+        (shownIds.has(p.id) ? stale : fresh).push(p);
+      }
+
+      let pool = [...fresh, ...stale];
+
+      if (colorFilterColors.size > 0) {
+        const hits   = pool.filter(p => p.color && colorFilterColors.has(p.color));
+        const misses = pool.filter(p => !p.color || !colorFilterColors.has(p.color));
+        pool = [...hits, ...misses];
+      }
+
+      pool = pool.slice(0, unlockedIndices.size);
+      nextIndex = (nextIndex + Math.max(unlockedIndices.size, 1)) % total;
+
+      let poolIdx = 0;
+      slotProducts = slotProducts.map((p, i) => {
+        if (p && !slotLocked[i] && poolIdx < pool.length) {
+          slotMaterials[i] = randomMaterial();
+          return pool[poolIdx++];
+        }
+        return p;
+      });
+
+      renderSlots(unlockedIndices);
+      setTimeout(() => { isFading = false; }, 700);
+    }
+
+    // ── Undo the last Roll (← arrow) ───────────────────────────────────
+    async function doUndo() {
+      if (rollHistory.length === 0 || isFading) return;
+      isFading = true;
+
+      const unlockedIndices = new Set(
+        slotProducts.reduce((acc, p, i) => { if (p && !slotLocked[i]) acc.push(i); return acc; }, [])
+      );
+      document.getElementById('productsGrid').querySelectorAll('.product-card').forEach(el => {
+        if (unlockedIndices.has(parseInt(el.dataset.slot, 10))) {
+          el.style.transition = 'opacity 350ms linear';
+          el.style.opacity    = '0';
+        }
+      });
+      await new Promise(r => setTimeout(r, 350));
+
+      const snap         = rollHistory.pop();
+      slotProducts       = snap.slotProducts;
+      slotLocked         = snap.slotLocked;
+      slotColorLocked    = snap.slotColorLocked;
+      colorFilterColors  = snap.colorFilterColors;
+      slotMaterials      = snap.slotMaterials;
+      slotMaterialLocked = snap.slotMaterialLocked;
+      slotAttrLocked     = snap.slotAttrLocked;
+      nextIndex          = snap.nextIndex;
+      renderSlots(unlockedIndices);
+      setTimeout(() => { isFading = false; }, 700);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  EVENT LISTENERS
+    // ═══════════════════════════════════════════════════════════════════
+
+    // Header search → navigate with new query
+    document.getElementById('resultsSearchForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const q = document.getElementById('resultsSearchInput').value.trim();
+      if (q) window.location.href = 'search.html?q=' + encodeURIComponent(q);
+    });
+
+    // ROLL / arrows / spacebar
+    document.getElementById('rollBtn').addEventListener('click', doRoll);
+    document.getElementById('prevBtn').addEventListener('click', doUndo);
+    document.getElementById('nextBtn').addEventListener('click', doRoll);
+    document.addEventListener('keydown', function (e) {
+      if (e.code === 'Space' && !e.target.matches('input, textarea, [contenteditable]')) {
+        e.preventDefault();
+        doRoll();
+      }
+    });
+
+    // ── Lock button clicks (event delegation) ──────────────────────────
+    document.getElementById('productsGrid').addEventListener('click', function (e) {
+
+      // Dismiss (X button — removes card permanently for this session)
+      const closeBtn = e.target.closest('.close-btn');
+      if (closeBtn) {
+        e.stopPropagation();
+        const slot    = parseInt(closeBtn.dataset.slot, 10);
+        const product = slotProducts[slot];
+        if (!product) return;
+        dismissedIds.add(product.id);
+        filteredResults        = filteredResults.filter(p => !dismissedIds.has(p.id));
+        slotProducts[slot]       = null;
+        slotLocked[slot]         = false;
+        slotColorLocked[slot]    = false;
+        slotMaterials[slot]      = null;
+        slotMaterialLocked[slot] = false;
+        slotAttrLocked[slot]     = activeAttributes.map(() => false);
+        compactSlots();
+        rollHistory = [];
+        renderSlots();
+        return;
+      }
+
+      // Slot lock (top-right of overlay or persistent badge)
+      const slotBtn = e.target.closest('.slot-lock-btn');
+      if (slotBtn) {
+        e.stopPropagation();
+        const card = slotBtn.closest('.product-card');
+        const slot = parseInt(card.dataset.slot, 10);
+
+        slotLocked[slot] = !slotLocked[slot];
+
+        if (!slotLocked[slot]) {
+          // Unlock cascade: clear all sub-locks
+          slotColorLocked[slot]    = false;
+          slotMaterialLocked[slot] = false;
+          slotAttrLocked[slot]     = activeAttributes.map(() => false);
+          rebuildColorFilterColors();
+        }
+
+        renderSlots(false);
+        return;
+      }
+
+      // Colour lock
+      const decoBtn = e.target.closest('.deco-lock-btn');
+      if (decoBtn) {
+        e.stopPropagation();
+        const card    = decoBtn.closest('.product-card');
+        const slot    = parseInt(card.dataset.slot, 10);
+        const product = slotProducts[slot];
+        if (!product) return;
+
+        const isLocking = decoBtn.getAttribute('data-deco') !== '1';
+
+        if (isLocking) {
+          slotColorLocked[slot] = true;
+          slotLocked[slot]      = true;
+          if (product.color) colorFilterColors.add(product.color);
+        } else {
+          slotColorLocked[slot] = false;
+          slotLocked[slot]      = false;
+          rebuildColorFilterColors();
+        }
+
+        renderSlots(false);
+        return;
+      }
+
+      // Material lock
+      const materialLockBtn = e.target.closest('.material-lock-btn');
+      if (materialLockBtn) {
+        e.stopPropagation();
+        const card = materialLockBtn.closest('.product-card');
+        const slot = parseInt(card.dataset.slot, 10);
+        if (!slotProducts[slot]) return;
+
+        const isLocking = materialLockBtn.getAttribute('data-material-locked') !== '1';
+
+        if (isLocking) {
+          slotMaterialLocked[slot] = true;
+          slotLocked[slot]         = true;
+        } else {
+          slotMaterialLocked[slot] = false;
+          slotLocked[slot] = slotColorLocked[slot] ||
+            !!(slotAttrLocked[slot] && slotAttrLocked[slot].some(Boolean));
+        }
+
+        renderSlots(false);
+        return;
+      }
+
+      // Attribute remove (X button)
+      const attrRemoveBtn = e.target.closest('.attr-remove-btn');
+      if (attrRemoveBtn) {
+        e.stopPropagation();
+        const attrIdx = parseInt(attrRemoveBtn.dataset.attrIdx, 10);
+        activeAttributes.splice(attrIdx, 1);
+        for (let i = 0; i < 5; i++) {
+          if (slotAttrLocked[i]) slotAttrLocked[i].splice(attrIdx, 1);
+        }
+        // Re-evaluate slot locks in case the removed attr was the only lock
+        for (let i = 0; i < 5; i++) {
+          if (!slotColorLocked[i] && !slotMaterialLocked[i] &&
+              !(slotAttrLocked[i] && slotAttrLocked[i].some(Boolean))) {
+            slotLocked[i] = false;
+          }
+        }
+        runSearch(query, false);
+        return;
+      }
+
+      // Attribute lock
+      const attrLockBtn = e.target.closest('.attr-lock-btn');
+      if (attrLockBtn) {
+        e.stopPropagation();
+        const card    = attrLockBtn.closest('.product-card');
+        const slot    = parseInt(card.dataset.slot, 10);
+        const attrIdx = parseInt(attrLockBtn.dataset.attrIdx, 10);
+        if (!slotProducts[slot]) return;
+
+        if (!slotAttrLocked[slot]) slotAttrLocked[slot] = activeAttributes.map(() => false);
+        const isLocking = attrLockBtn.getAttribute('data-attr-locked') !== '1';
+        slotAttrLocked[slot][attrIdx] = isLocking;
+
+        if (isLocking) {
+          slotLocked[slot] = true;
+        } else {
+          slotLocked[slot] = slotColorLocked[slot] || slotMaterialLocked[slot] ||
+            slotAttrLocked[slot].some(Boolean);
+        }
+
+        renderSlots(false);
+        return;
+      }
+    });
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  ATTRIBUTE SEARCH DROPDOWN
+    // ═══════════════════════════════════════════════════════════════════
+    const attrInput    = document.querySelector('.attr-search-input');
+    const attrDropdown = document.getElementById('attrDropdown');
+    let   attrDropdownOptions = [];
+
+    function buildDropdownOptions(filterText) {
+      const category  = getSearchCategory(query);
+      const all       = getAllAttrOptions(category);
+      const available = all.filter(opt =>
+        !activeAttributes.some(a => a.attrName === opt.attrName && a.value === opt.value)
+      );
+      if (!filterText) return available;
+      const f = filterText.toLowerCase();
+      return available.filter(opt =>
+        opt.display.toLowerCase().includes(f) || opt.attrName.toLowerCase().includes(f)
+      );
+    }
+
+    function showAttrDropdown() {
+      const options = buildDropdownOptions(attrInput.value.trim());
+      attrDropdownOptions = options;
+      if (options.length === 0) {
+        attrDropdown.innerHTML = '';
+        attrDropdown.classList.remove('is-open');
+        return;
+      }
+      attrDropdown.innerHTML = options.map((opt, i) =>
+        `<div class="attr-dropdown-option" data-opt-idx="${i}">${opt.display}</div>`
+      ).join('');
+      attrDropdown.classList.add('is-open');
+    }
+
+    function hideAttrDropdown() {
+      attrDropdown.classList.remove('is-open');
+    }
+
+    attrInput.addEventListener('focus', showAttrDropdown);
+    attrInput.addEventListener('input', showAttrDropdown);
+    attrInput.addEventListener('blur', () => setTimeout(hideAttrDropdown, 150));
+
+    attrDropdown.addEventListener('mousedown', function (e) {
+      const optEl = e.target.closest('.attr-dropdown-option');
+      if (!optEl) return;
+      e.preventDefault(); // prevent blur from closing before we process click
+      const idx    = parseInt(optEl.dataset.optIdx, 10);
+      const chosen = attrDropdownOptions[idx];
+      if (!chosen) return;
+
+      activeAttributes.push({ attrName: chosen.attrName, value: chosen.value, display: chosen.display });
+      for (let i = 0; i < 5; i++) {
+        if (!slotAttrLocked[i]) slotAttrLocked[i] = [];
+        slotAttrLocked[i].push(false);
+      }
+
+      attrInput.value = '';
+      hideAttrDropdown();
+      runSearch(query, false);
+    });
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  INIT — read query from URL, kick off async search
+    // ═══════════════════════════════════════════════════════════════════
+    const params       = new URLSearchParams(window.location.search);
+    const query        = params.get('q') || '';
+    const collectionId = params.get('collection');
+    document.getElementById('resultsSearchInput').value = query;
+    document.getElementById('productsGrid').style.opacity = '0';
+
+    if (collectionId) {
+      const cs   = getOutfits();
+      const coll = cs.find(c => c.id === collectionId);
+      if (coll && coll.products.length > 0) {
+        rankedResults = coll.products;
+        initSlots(coll.products);
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          document.getElementById('productsGrid').style.opacity = '1';
+        }));
+      } else {
+        document.getElementById('noResults').textContent   = 'Outfit is empty.';
+        document.getElementById('noResults').style.display = 'block';
+        document.getElementById('productsGrid').style.opacity = '1';
+      }
+    } else {
+      runSearch(query, true);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  OUTFITS (localStorage)
+    // ═══════════════════════════════════════════════════════════════════
+    function getOutfits() {
+      return JSON.parse(localStorage.getItem('tca_outfits') || '[]');
+    }
+    function saveOutfits(cs) {
+      localStorage.setItem('tca_outfits', JSON.stringify(cs));
+    }
+
+    let currentSaveProduct = null;
+
+    function renderModalOutfits() {
+      const list        = document.getElementById('saveModalList');
+      const outfits = getOutfits();
+      if (outfits.length === 0) {
+        list.innerHTML = '<p style="font-family:\'Manrope-Regular\',sans-serif;font-size:14px;color:var(--muted);padding:6px 0;">No outfits yet.</p>';
+        return;
+      }
+      list.innerHTML = outfits.map(coll => {
+        const saved   = currentSaveProduct && coll.products.some(p => p.id === currentSaveProduct.id);
+        const nameEsc = coll.name.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+        const thumb   = coll.products[0]
+          ? `<img src="${coll.products[0].image_url}" style="width:52px;height:52px;object-fit:cover;border-radius:6px;flex-shrink:0;" alt="">`
+          : `<div class="save-outfit-thumb"></div>`;
+        return `<div class="save-outfit-item${saved ? ' is-saved' : ''}" data-coll-id="${coll.id}">
+          ${thumb}
+          <span class="save-outfit-name">${nameEsc}</span>
+          ${saved
+            ? `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><polyline points="2,7 5,10.5 12,3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+            : `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="7" y1="2" x2="7" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="2" y1="7" x2="12" y2="7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`
+          }        </div>`;
+      }).join('');
+    }
+
+    function openSaveModal(product) {
+      currentSaveProduct = product || null;
+      renderModalOutfits();
+      document.getElementById('saveModal').classList.add('is-open');
+      document.getElementById('saveModalInput').focus();
+    }
+
+    function closeSaveModal() {
+      document.getElementById('saveModal').classList.remove('is-open');
+      currentSaveProduct = null;
+    }
+
+    document.getElementById('saveModalClose').addEventListener('click', closeSaveModal);
+
+    document.getElementById('saveModal').addEventListener('click', function (e) {
+      if (e.target === this) closeSaveModal();
+    });
+
+    document.getElementById('saveModalList').addEventListener('click', function (e) {
+      const item = e.target.closest('.save-outfit-item');
+      if (!item || !currentSaveProduct) return;
+      const outfits = getOutfits();
+      const coll        = outfits.find(c => c.id === item.dataset.collId);
+      if (!coll) return;
+      const idx = coll.products.findIndex(p => p.id === currentSaveProduct.id);
+      if (idx >= 0) coll.products.splice(idx, 1);
+      else           coll.products.push(currentSaveProduct);
+      saveOutfits(outfits);
+      closeSaveModal();
+    });
+
+    document.getElementById('saveModalAddBtn').addEventListener('click', function () {
+      const input = document.getElementById('saveModalInput');
+      const name  = input.value.trim();
+      if (!name) return;
+      const outfits = getOutfits();
+      const newColl = {
+        id:       Date.now().toString(36) + Math.random().toString(36).slice(2),
+        name,
+        products: currentSaveProduct ? [currentSaveProduct] : [],
+      };
+      outfits.push(newColl);
+      saveOutfits(outfits);
+      input.value = '';
+      renderModalOutfits();
+    });
+
+    document.getElementById('saveModalInput').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') document.getElementById('saveModalAddBtn').click();
+    });
+
+    // Save button clicks — delegate from productsGrid
+    document.getElementById('productsGrid').addEventListener('click', function (e) {
+      const saveBtn = e.target.closest('.save-btn');
+      if (saveBtn) {
+        e.stopPropagation();
+        const card    = saveBtn.closest('.product-card');
+        const slot    = parseInt(card.dataset.slot, 10);
+        openSaveModal(slotProducts[slot]);
+      }
+    });
+
+    // ── Price filter ──────────────────────────────────────────────────
+    document.getElementById('priceSearchBtn').addEventListener('click', async function () {
+      if (isFading) return;
+      isFading = true;
+
+      const track = document.getElementById('productsGrid');
+      track.style.transition = 'opacity 700ms linear';
+      track.style.opacity = '0';
+      await new Promise(r => setTimeout(r, 350));
+
+      const min = parseFloat(document.getElementById('priceMin').value);
+      const max = parseFloat(document.getElementById('priceMax').value);
+      filteredResults = rankedResults.filter(p => {
+        const price = p.price != null ? Number(p.price) : null;
+        if (price === null) return true;
+        if (!isNaN(min) && price < min) return false;
+        if (!isNaN(max) && price > max) return false;
+        return true;
+      });
+      slotProducts       = Array.from({ length: 5 }, (_, i) => filteredResults[i] || null);
+      slotLocked         = [false, false, false, false, false];
+      slotColorLocked    = [false, false, false, false, false];
+      slotMaterials      = Array.from({ length: 5 }, () => randomMaterial());
+      slotMaterialLocked = [false, false, false, false, false];
+      slotAttrLocked     = Array.from({ length: 5 }, () => activeAttributes.map(() => false));
+      colorFilterColors.clear();
+      nextIndex          = Math.min(5, filteredResults.length);
+      rollHistory        = [];
+      renderSlots();
+
+      track.style.transition = 'opacity 350ms linear';
+      track.style.opacity = '1';
+      setTimeout(() => { isFading = false; }, 350);
+    });
+
+    // ── Drag-to-reorder ────────────────────────────────────────────────
+    let dndSearch = null;
+
+    document.getElementById('productsGrid').addEventListener('mousedown', function (e) {
+      const handle = e.target.closest('.dots-grid');
+      if (!handle) return;
+      const card = handle.closest('.product-card');
+      if (!card || card.dataset.slot === undefined) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const slotIdx = parseInt(card.dataset.slot, 10);
+      const rect    = card.getBoundingClientRect();
+
+      const allCardsForGap = Array.from(document.querySelector('.products-scroll-wrapper').querySelectorAll('.product-card'));
+      let gapW = 16;
+      for (let k = 0; k + 1 < allCardsForGap.length; k++) {
+        const ra = allCardsForGap[k].getBoundingClientRect();
+        const rb = allCardsForGap[k + 1].getBoundingClientRect();
+        const g  = rb.left - ra.right;
+        if (g >= 0) { gapW = g; break; }
+      }
+      const shiftW = rect.width + gapW;
+
+      const ghost = card.cloneNode(true);
+      Object.assign(ghost.style, {
+        position: 'fixed', width: rect.width + 'px', height: rect.height + 'px',
+        top: rect.top + 'px', left: rect.left + 'px',
+        opacity: '0.88', pointerEvents: 'none', zIndex: '9999',
+        transition: 'none', margin: '0',
+        boxShadow: '0 8px 32px rgba(49,34,12,0.22)',
+        borderRadius: 'var(--card-radius)',
+      });
+      document.body.appendChild(ghost);
+      card.style.opacity      = '0';
+      card.style.pointerEvents = 'none';
+      document.body.style.userSelect = 'none';
+
+      dndSearch = { slotIdx, dropIdx: slotIdx, ghost, card, shiftW,
+                    offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top };
+    });
+
+    document.addEventListener('mousemove', function (e) {
+      if (!dndSearch) return;
+      dndSearch.ghost.style.left = (e.clientX - dndSearch.offsetX) + 'px';
+      dndSearch.ghost.style.top  = (e.clientY - dndSearch.offsetY) + 'px';
+
+      const cards = Array.from(document.getElementById('productsGrid').querySelectorAll('.product-card'));
+      let bestIdx = dndSearch.slotIdx, minDist = Infinity;
+      cards.forEach(c => {
+        const ci = parseInt(c.dataset.slot, 10);
+        if (ci === dndSearch.slotIdx) return;
+        const r  = c.getBoundingClientRect();
+        const cx = r.left + r.width / 2;
+        const dist = Math.abs(e.clientX - cx);
+        if (dist < minDist) { minDist = dist; bestIdx = ci; }
+      });
+
+      if (bestIdx === dndSearch.dropIdx) return;
+      dndSearch.dropIdx = bestIdx;
+
+      cards.forEach(c => {
+        const ci = parseInt(c.dataset.slot, 10);
+        if (ci === dndSearch.slotIdx) return;
+        c.style.transition = 'transform 0.18s ease';
+        if (dndSearch.slotIdx < dndSearch.dropIdx) {
+          c.style.transform = (ci > dndSearch.slotIdx && ci <= dndSearch.dropIdx)
+            ? `translateX(-${dndSearch.shiftW}px)` : '';
+        } else {
+          c.style.transform = (ci >= dndSearch.dropIdx && ci < dndSearch.slotIdx)
+            ? `translateX(${dndSearch.shiftW}px)` : '';
+        }
+      });
+    });
+
+    document.addEventListener('mouseup', function () {
+      if (!dndSearch) return;
+      const { slotIdx, dropIdx } = dndSearch;
+      dndSearch.ghost.remove();
+      document.getElementById('productsGrid')
+        .querySelectorAll('.product-card')
+        .forEach(c => { c.style.transform = ''; c.style.transition = '';
+                        c.style.opacity = ''; c.style.pointerEvents = ''; });
+      document.body.style.userSelect = '';
+      dndSearch = null;
+
+      if (slotIdx !== dropIdx) {
+        const reorder = arr => { const [item] = arr.splice(slotIdx, 1); arr.splice(dropIdx, 0, item); };
+        reorder(slotProducts);
+        reorder(slotLocked);
+        reorder(slotColorLocked);
+        reorder(slotMaterials);
+        reorder(slotMaterialLocked);
+        reorder(slotAttrLocked);
+        renderSlots(false);
+      }
+    });
+
+    // ── Lock scroll when all cards fit (no overflow) ──────────────────
+    (function () {
+      const wrapper = document.querySelector('.products-scroll-wrapper');
+      const track   = document.getElementById('productsGrid');
+      function sync() {
+        requestAnimationFrame(() => {
+          wrapper.style.overflowX = wrapper.scrollWidth <= wrapper.clientWidth + 1 ? 'hidden' : '';
+        });
+      }
+      new ResizeObserver(sync).observe(wrapper);
+      new MutationObserver(sync).observe(track, { childList: true });
+    })();
+
+    // ── Click-drag to scroll the products strip ────────────────────────
+    (function () {
+      var scroller = document.querySelector('.products-scroll-wrapper');
+      var isDown = false, startX, scrollLeft;
+
+      scroller.addEventListener('mousedown', function (e) {
+        isDown     = true;
+        scroller.style.cursor = 'grabbing';
+        startX     = e.pageX - scroller.offsetLeft;
+        scrollLeft = scroller.scrollLeft;
+      });
+      document.addEventListener('mouseup',    function () { isDown = false; scroller.style.cursor = ''; });
+      scroller.addEventListener('mouseleave', function () { isDown = false; scroller.style.cursor = ''; });
+      scroller.addEventListener('mousemove',  function (e) {
+        if (!isDown) return;
+        e.preventDefault();
+        scroller.scrollLeft = scrollLeft - (e.pageX - scroller.offsetLeft - startX) * 1.2;
+      });
+    })();
+  </script>
+
+</body>
+</html>
