@@ -1,0 +1,9 @@
+flask
+flask-cors
+numpy
+faiss-cpu
+Pillow
+torch
+torchvision
+git+https://github.com/openai/CLIP.git
+requests
